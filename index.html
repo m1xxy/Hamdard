@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hamdard Dental & Skin Clinic | Premium Care</title>
+
+    <!-- Google Fonts: Elegant Serif & Modern Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Tailwind CSS (CDN Config) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        forest: '#183B32',
+                        darkGreen: '#102B25',
+                        sage: '#879B89',
+                        cream: '#F7F2E8',
+                        beige: '#E5D8C5',
+                        taupe: '#B7A995',
+                        charcoal: '#292824',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    boxShadow: {
+                        'ios': '0 8px 32px rgba(41, 40, 36, 0.08)',
+                        'ios-lg': '0 16px 48px rgba(41, 40, 36, 0.12)',
+                        'ios-inner': 'inset 0 2px 4px rgba(255, 255, 255, 0.5)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Libraries: GSAP, Three.js, Canvas Confetti -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        /* --- iOS & Glassmorphism Utilities --- */
+        body {
+            background-color: #F7F2E8; /* Cream base */
+            -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
+        }
+
+        /* Hide scrollbar for a clean app feel */
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+        * { scrollbar-width: none; }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+        .glass-dark {
+            background: rgba(24, 59, 50, 0.85); /* Forest */
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #F7F2E8;
+        }
+        .glass-sage {
+            background: rgba(135, 155, 137, 0.85);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            color: #F7F2E8;
+        }
+
+        /* --- Background Canvas --- */
+        #bg-canvas {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -1; pointer-events: none;
+        }
+
+        /* --- Lightbox --- */
+        .lightbox {
+            position: fixed; inset: 0; z-index: 9999;
+            background: rgba(16, 43, 37, 0.95); backdrop-filter: blur(10px);
+            display: none; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+        .lightbox.active { display: flex; opacity: 1; }
+        .lightbox img { max-width: 90%; max-height: 90vh; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        
+        /* --- Wizard Calendar UI --- */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; }
+        .day { padding: 12px 0; border-radius: 12px; cursor: pointer; border: 1px solid transparent; font-weight: 500; transition: all 0.2s; background: rgba(255,255,255,0.5); }
+        .day:not(.disabled):hover { border-color: #879B89; transform: translateY(-2px); }
+        .day.disabled { opacity: 0.4; cursor: not-allowed; background: transparent; }
+        .day.selected { background: #183B32; color: #F7F2E8; font-weight: bold; transform: scale(1.05); box-shadow: 0 4px 12px rgba(24,59,50,0.3); }
+        
+        /* --- Wizard Form --- */
+        .wizard-step { display: none; animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .wizard-step.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .ios-input {
+            width: 100%; padding: 16px; border-radius: 16px; border: 1px solid rgba(183, 169, 149, 0.3);
+            background: rgba(255, 255, 255, 0.7); outline: none; font-size: 16px; transition: all 0.3s;
+        }
+        .ios-input:focus { background: #fff; border-color: #183B32; box-shadow: 0 0 0 4px rgba(24,59,50,0.1); }
+    </style>
+</head>
+<body class="text-charcoal pb-24 md:pb-0">
+
+    <!-- DATA CONFIGURATION -->
+    <script>
+        const clinicData = {
+            // PASTE YOUR GOOGLE BUSINESS LOGO IMAGE URL HERE:
+            logoUrl: "https://img.icons8.com/ios-filled/100/183B32/tooth.png", 
+            
+            phones: {
+                booking: "923207171575", // WhatsApp Appointment target
+                general: "03206660077"   // General Contact from image
+            },
+            address: "Billa Chowk, Main market, 597-B Madina Masjid Rd, Block B Satellite Town, Gujranwala, 52250",
+            mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3378.857640306163!2d74.1843!3d32.1617!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzLCsDA5JzQyLjEiTiA3NMKwMTEnMDMuNSJF!5e0!3m2!1sen!2s!4v1620000000000!5m2!1sen!2s",
+            doctors: [
+                { name: "Dr. Hassan Ashfaq", title: "BDS, C.Ortho" },
+                { name: "Dr. Fahad Usman", title: "Dentist" }
+            ],
+            dentalServices: [
+                { name: "Dental Implants", desc: "Permanent replacement for missing teeth.", icon: "fa-tooth" },
+                { name: "Root Canal Treatment", desc: "Save infected or damaged teeth.", icon: "fa-teeth" },
+                { name: "Dental Crowns", desc: "Restore shape, size, and strength.", icon: "fa-crown" },
+                { name: "Dental Bridges", desc: "Bridge gaps from missing teeth.", icon: "fa-teeth-open" },
+                { name: "Dental Fillings", desc: "Restore decayed teeth securely.", icon: "fa-fill-drip" },
+                { name: "Teeth Whitening", desc: "Professional brightening for your smile.", icon: "fa-magic" },
+                { name: "Scaling & Polishing", desc: "Deep cleaning for healthy gums.", icon: "fa-hands-wash" },
+                { name: "Dentures", desc: "Custom artificial teeth.", icon: "fa-smile" },
+                { name: "Tooth Extraction", desc: "Painless removal of damaged teeth.", icon: "fa-syringe" },
+                { name: "Wisdom Tooth", desc: "Safe surgical extraction.", icon: "fa-user-md" },
+                { name: "Braces", desc: "Traditional metal alignment.", icon: "fa-smile-beam" },
+                { name: "Ceramic Braces", desc: "Discreet tooth alignment.", icon: "fa-gem" },
+                { name: "Teeth Straightening", desc: "Modern clear aligners.", icon: "fa-align-center" },
+                { name: "Cosmetic Dentistry", desc: "Complete smile makeovers.", icon: "fa-star" },
+                { name: "Veneers", desc: "Thin shells for perfect aesthetics.", icon: "fa-layer-group" },
+                { name: "Oral Examination", desc: "Comprehensive dental checkups.", icon: "fa-search" },
+                { name: "Dental Hygiene", desc: "Preventative care routines.", icon: "fa-leaf" },
+                { name: "Oral Surgery", desc: "Advanced reconstructive procedures.", icon: "fa-procedures" },
+                { name: "Bone Grafting", desc: "Foundation rebuilding for implants.", icon: "fa-bone" },
+                { name: "Diabetic Dental Care", desc: "Specialized care for diabetics.", icon: "fa-notes-medical" }
+            ],
+            skinServices: [
+                { name: "PRP Therapy", desc: "Natural skin rejuvenation & healing.", icon: "fa-vial" },
+                { name: "Skin Rejuvenation", desc: "Restore youthful texture & tone.", icon: "fa-sparkles" },
+                { name: "Skin Hydration", desc: "Deep moisture therapies.", icon: "fa-tint" },
+                { name: "Deep Cleansing", desc: "Medical-grade facials.", icon: "fa-pump-soap" },
+                { name: "Aesthetic Treatments", desc: "Enhance natural contours.", icon: "fa-magic" },
+                { name: "Hair Restoration / PRP", desc: "Stimulate natural hair growth.", icon: "fa-user" }
+            ],
+            reviews: [
+                { text: "Excellent experience. Very clean environment and professional staff.", name: "A. Khan", rating: 5 },
+                { text: "Got my teeth whitened and a skin hydration treatment. Highly recommend Hamdard.", name: "S. Ali", rating: 5 },
+                { text: "Painless root canal! Modern technology makes a huge difference.", name: "M. Rizwan", rating: 5 }
+            ]
+        };
+    </script>
+
+    <!-- 3D BACKGROUND -->
+    <div id="bg-canvas"></div>
+
+    <!-- DESKTOP NAVBAR -->
+    <nav class="fixed top-0 w-full z-50 p-4 transition-all duration-300" id="navbar">
+        <div class="max-w-7xl mx-auto glass rounded-full px-6 py-3 flex justify-between items-center shadow-ios">
+            
+            <!-- BRAND LOGO AREA -->
+            <div class="flex items-center gap-3">
+                <img id="navLogo" src="" alt="Hamdard Logo" class="w-8 h-8 object-contain">
+                <span class="font-serif text-forest font-bold text-xl tracking-wide">HAMDARD</span>
+            </div>
+
+            <div class="hidden md:flex space-x-6 text-sm font-semibold text-forest items-center">
+                <a href="#about" class="hover:text-sage transition">About</a>
+                <a href="#services" class="hover:text-sage transition">Dental & Skin</a>
+                <a href="#doctors" class="hover:text-sage transition">Doctors</a>
+                <a href="#gallery" class="hover:text-sage transition">Gallery</a>
+                <a href="#reviews" class="hover:text-sage transition">Reviews</a>
+                <a href="#booking" class="bg-forest text-cream px-6 py-2.5 rounded-full hover:bg-darkGreen transition shadow-md">
+                    Book Appointment
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="relative z-10">
+
+        <!-- HERO SECTION (CENTERED, NO IMAGE) -->
+        <section id="home" class="min-h-screen flex flex-col items-center justify-center pt-24 pb-12 px-4 max-w-4xl mx-auto text-center">
+            <div class="gsap-anim w-full">
+                <span class="text-sage font-bold tracking-[0.2em] text-xs uppercase mb-4 block">Hamdard Dental & Skin Clinic</span>
+                <h1 class="font-serif text-5xl md:text-7xl lg:text-8xl text-forest font-bold mb-6 leading-[1.1]">
+                    Healthy Smiles.<br>Beautiful Skin.
+                </h1>
+                <p class="text-lg md:text-xl text-forest/80 mb-10 max-w-2xl mx-auto">
+                    Advanced dental, skin and aesthetic care delivered with comfort, precision and personalized attention.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+                    <a href="#booking" class="bg-forest text-cream text-base font-semibold px-8 py-4 rounded-full shadow-ios-lg hover:scale-105 transition flex justify-center items-center gap-2">
+                        <i class="far fa-calendar-check"></i> Book Appointment
+                    </a>
+                    <a href="#services" class="glass text-forest text-base font-semibold px-8 py-4 rounded-full shadow-ios hover:bg-white/60 transition flex justify-center items-center">
+                        Explore Our Services
+                    </a>
+                </div>
+
+                <!-- Floating Rating Widget -->
+                <div class="glass inline-flex items-center gap-5 p-4 pr-6 rounded-full shadow-ios-lg hover:scale-105 transition duration-300">
+                    <div class="w-12 h-12 bg-forest text-cream rounded-full flex items-center justify-center text-xl shadow-inner shrink-0">
+                        <i class="fab fa-google"></i>
+                    </div>
+                    <div class="text-left">
+                        <div class="text-yellow-500 text-sm mb-0.5">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                        </div>
+                        <div class="font-bold text-forest text-sm md:text-base">
+                            5.0 Rating <span class="text-forest/70 font-normal ml-1">(182 Reviews)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ABOUT (SPLIT SCREEN) -->
+        <section id="about" class="py-20 px-4 max-w-7xl mx-auto">
+            <div class="glass rounded-[3rem] p-8 md:p-12 shadow-ios grid md:grid-cols-2 gap-12 items-center">
+                <div class="gsap-anim h-full min-h-[300px] rounded-3xl overflow-hidden shadow-md">
+                    <img src="https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&q=80&w=800" alt="Modern Tech" class="w-full h-full object-cover">
+                </div>
+                <div class="gsap-anim">
+                    <span class="text-sage font-bold tracking-widest text-xs uppercase mb-2 block">About Hamdard</span>
+                    <h2 class="font-serif text-3xl md:text-5xl text-forest font-bold mb-6">Redefining Premium Healthcare.</h2>
+                    <p class="text-forest/80 mb-4 leading-relaxed">
+                        Hamdard provides comprehensive dental and skin care under one roof. We believe that true wellness combines aesthetic beauty with functional health.
+                    </p>
+                    <p class="text-forest/80 mb-8 leading-relaxed">
+                        Our facility is built on the pillars of strict hygiene, state-of-the-art technology, and a commitment to patient comfort, ensuring every visit is a personalized luxury experience.
+                    </p>
+                    
+                    <!-- Why Choose Us Mini Cards -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white/50 p-4 rounded-2xl"><i class="fas fa-user-md text-sage mb-2 text-xl"></i><h4 class="font-bold text-forest text-sm">Personalized Care</h4></div>
+                        <div class="bg-white/50 p-4 rounded-2xl"><i class="fas fa-microscope text-sage mb-2 text-xl"></i><h4 class="font-bold text-forest text-sm">Modern Technology</h4></div>
+                        <div class="bg-white/50 p-4 rounded-2xl"><i class="fas fa-couch text-sage mb-2 text-xl"></i><h4 class="font-bold text-forest text-sm">Comfortable Treatment</h4></div>
+                        <div class="bg-white/50 p-4 rounded-2xl"><i class="fas fa-pump-soap text-sage mb-2 text-xl"></i><h4 class="font-bold text-forest text-sm">Hygienic Environment</h4></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FEATURED SPLIT BANNER -->
+        <section class="py-12 px-4 max-w-7xl mx-auto">
+            <div class="glass-dark rounded-[3rem] p-10 md:p-16 text-center shadow-ios-lg gsap-anim">
+                <h2 class="font-serif text-4xl md:text-5xl mb-10 text-cream">Complete Care. Under One Roof.</h2>
+                <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                    <div class="glass p-8 rounded-3xl border border-white/20 hover:bg-white/10 transition">
+                        <i class="fas fa-tooth text-4xl text-sage mb-4"></i>
+                        <h3 class="text-2xl font-serif text-cream mb-2">DENTAL</h3>
+                        <p class="text-cream/80">Healthy teeth. Confident smiles.</p>
+                    </div>
+                    <div class="glass p-8 rounded-3xl border border-white/20 hover:bg-white/10 transition">
+                        <i class="fas fa-leaf text-4xl text-sage mb-4"></i>
+                        <h3 class="text-2xl font-serif text-cream mb-2">SKIN & AESTHETICS</h3>
+                        <p class="text-cream/80">Healthy-looking skin. Natural confidence.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- DENTAL SERVICES GRID -->
+        <section id="services" class="py-20 px-4 max-w-7xl mx-auto">
+            <div class="text-center mb-12 gsap-anim">
+                <span class="text-sage font-bold tracking-widest text-xs uppercase mb-2 block">Dental Studio</span>
+                <h2 class="font-serif text-4xl text-forest font-bold">Premium Dental Solutions</h2>
+            </div>
+            <!-- JS Injected Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" id="dentalGrid"></div>
+        </section>
+
+        <!-- SKIN SERVICES GRID -->
+        <section class="py-20 px-4 max-w-7xl mx-auto">
+            <div class="glass-sage rounded-[3rem] p-8 md:p-16 shadow-ios gsap-anim">
+                <div class="text-center mb-12">
+                    <span class="text-cream/80 font-bold tracking-widest text-xs uppercase mb-2 block">Aesthetics</span>
+                    <h2 class="font-serif text-4xl text-forest font-bold">Advanced Skin Care</h2>
+                </div>
+                <!-- JS Injected Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="skinGrid"></div>
+            </div>
+        </section>
+
+        <!-- DOCTORS (NO IMAGES, CLEAN ICONS) -->
+        <section id="doctors" class="py-20 px-4 max-w-7xl mx-auto">
+            <div class="text-center mb-12 gsap-anim">
+                <span class="text-sage font-bold tracking-widest text-xs uppercase mb-2 block">Our Experts</span>
+                <h2 class="font-serif text-4xl text-forest font-bold">Verified Medical Team</h2>
+            </div>
+            <div class="flex flex-wrap justify-center gap-8" id="doctorsGrid"></div>
+        </section>
+
+        <!-- GALLERIES (SMILE & SKIN) -->
+        <section id="gallery" class="py-20 px-4 max-w-7xl mx-auto">
+            <div class="text-center mb-12 gsap-anim">
+                <span class="text-sage font-bold tracking-widest text-xs uppercase mb-2 block">Transformations</span>
+                <h2 class="font-serif text-4xl text-forest font-bold">Smile & Skin Gallery</h2>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 gsap-anim">
+                <!-- Gallery Items -->
+                <div class="relative aspect-square rounded-3xl overflow-hidden cursor-pointer group" onclick="openLightbox('https://images.unsplash.com/photo-1600170311833-c2cf5280ce49?auto=format&fit=crop&q=80&w=800')">
+                    <img src="https://images.unsplash.com/photo-1600170311833-c2cf5280ce49?auto=format&fit=crop&q=80&w=600" class="w-full h-full object-cover group-hover:scale-110 transition duration-500" alt="Cosmetic Dentistry">
+                    <div class="absolute inset-0 bg-forest/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"><span class="text-cream font-serif text-xl">Cosmetic</span></div>
+                </div>
+                <div class="relative aspect-square rounded-3xl overflow-hidden cursor-pointer group" onclick="openLightbox('https://images.unsplash.com/photo-1512496015851-a1fbaf692a9c?auto=format&fit=crop&q=80&w=800')">
+                    <img src="https://images.unsplash.com/photo-1512496015851-a1fbaf692a9c?auto=format&fit=crop&q=80&w=600" class="w-full h-full object-cover group-hover:scale-110 transition duration-500" alt="Skin Rejuvenation">
+                    <div class="absolute inset-0 bg-forest/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"><span class="text-cream font-serif text-xl">Skin PRP</span></div>
+                </div>
+                <div class="relative aspect-square rounded-3xl overflow-hidden cursor-pointer group" onclick="openLightbox('https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&q=80&w=800')">
+                    <img src="https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&q=80&w=600" class="w-full h-full object-cover group-hover:scale-110 transition duration-500" alt="Whitening">
+                    <div class="absolute inset-0 bg-forest/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"><span class="text-cream font-serif text-xl">Whitening</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- REVIEWS -->
+        <section id="reviews" class="py-20 px-4 max-w-7xl mx-auto">
+            <div class="glass rounded-[3rem] p-8 md:p-16 shadow-ios gsap-anim">
+                <div class="text-center mb-12">
+                    <h2 class="font-serif text-4xl text-forest font-bold mb-4">Patient Reviews</h2>
+                    <div class="inline-flex items-center gap-3 glass px-6 py-2 rounded-full">
+                        <span class="text-yellow-500 text-lg"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></span>
+                        <span class="font-bold text-forest">5.0</span>
+                        <span class="text-sm text-forest/70">(182 Google Reviews)</span>
+                    </div>
+                </div>
+                <div class="grid md:grid-cols-3 gap-6" id="reviewsGrid"></div>
+            </div>
+        </section>
+
+        <!-- APPOINTMENT BOOKING WIZARD (MULTI-STEP) -->
+        <section id="booking" class="py-20 px-4 max-w-3xl mx-auto">
+            <div class="glass rounded-[3rem] p-6 md:p-12 shadow-ios-lg gsap-anim relative overflow-hidden">
+                <div class="text-center mb-8">
+                    <span class="text-sage font-bold tracking-widest text-xs uppercase mb-2 block">Reserve Your Time</span>
+                    <h2 class="font-serif text-3xl md:text-4xl text-forest font-bold">Book an Appointment</h2>
+                </div>
+
+                <!-- Step Indicators -->
+                <div class="flex justify-between items-center mb-10 relative">
+                    <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-white/50 z-0 rounded-full"></div>
+                    <div class="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-forest z-0 rounded-full transition-all duration-300" id="progress-bar" style="width: 0%;"></div>
+                    
+                    <div class="w-10 h-10 rounded-full glass border-2 border-forest text-forest font-bold flex items-center justify-center relative z-10 bg-white" id="ind-1">1</div>
+                    <div class="w-10 h-10 rounded-full glass border-2 border-white/50 text-forest/50 font-bold flex items-center justify-center relative z-10 bg-cream" id="ind-2">2</div>
+                    <div class="w-10 h-10 rounded-full glass border-2 border-white/50 text-forest/50 font-bold flex items-center justify-center relative z-10 bg-cream" id="ind-3">3</div>
+                    <div class="w-10 h-10 rounded-full glass border-2 border-white/50 text-forest/50 font-bold flex items-center justify-center relative z-10 bg-cream" id="ind-4">4</div>
+                    <div class="w-10 h-10 rounded-full glass border-2 border-white/50 text-forest/50 font-bold flex items-center justify-center relative z-10 bg-cream" id="ind-5">5</div>
+                </div>
+
+                <!-- STEP 1: DATE -->
+                <div class="wizard-step active" id="step-1">
+                    <h3 class="text-xl font-bold text-forest mb-4">Select a Date</h3>
+                    <div class="glass p-4 rounded-2xl">
+                        <div class="flex justify-between items-center mb-4">
+                            <button type="button" onclick="changeMonth(-1)" class="w-8 h-8 rounded-full bg-white/50 hover:bg-forest hover:text-white transition"><i class="fas fa-chevron-left"></i></button>
+                            <h4 id="monthDisplay" class="font-bold text-forest">Month Year</h4>
+                            <button type="button" onclick="changeMonth(1)" class="w-8 h-8 rounded-full bg-white/50 hover:bg-forest hover:text-white transition"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                        <div class="calendar-grid text-xs text-sage font-bold mb-2">
+                            <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
+                        </div>
+                        <div class="calendar-grid" id="calendarDays"></div>
+                    </div>
+                    <div class="mt-6 flex justify-end">
+                        <button type="button" id="btnNext1" disabled onclick="navStep(2)" class="bg-forest text-cream px-8 py-3 rounded-xl font-semibold opacity-50 cursor-not-allowed transition">Next</button>
+                    </div>
+                </div>
+
+                <!-- STEP 2: TIME -->
+                <div class="wizard-step" id="step-2">
+                    <h3 class="text-xl font-bold text-forest mb-2">Select a Time</h3>
+                    <p class="text-sm text-forest/70 mb-4">Showing slots for <span id="displayDate" class="font-bold text-forest"></span></p>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="timeGrid">
+                        <!-- JS Injected Times -->
+                    </div>
+                    <div class="mt-8 flex justify-between">
+                        <button type="button" onclick="navStep(1)" class="glass text-forest px-8 py-3 rounded-xl font-semibold hover:bg-white transition">Back</button>
+                        <button type="button" id="btnNext2" disabled onclick="navStep(3)" class="bg-forest text-cream px-8 py-3 rounded-xl font-semibold opacity-50 cursor-not-allowed transition">Next</button>
+                    </div>
+                </div>
+
+                <!-- STEP 3: SERVICE -->
+                <div class="wizard-step" id="step-3">
+                    <h3 class="text-xl font-bold text-forest mb-4">Select Service</h3>
+                    <div class="space-y-4">
+                        <select id="aptType" class="ios-input font-medium text-forest" onchange="updateServiceDropdown()">
+                            <option value="">-- Choose Category --</option>
+                            <option value="Dental">Dental Care</option>
+                            <option value="Skin">Skin & Aesthetics</option>
+                        </select>
+                        <select id="aptService" class="ios-input font-medium text-forest hidden" onchange="checkStep3()">
+                            <option value="">-- Choose Specific Service --</option>
+                        </select>
+                    </div>
+                    <div class="mt-8 flex justify-between">
+                        <button type="button" onclick="navStep(2)" class="glass text-forest px-8 py-3 rounded-xl font-semibold hover:bg-white transition">Back</button>
+                        <button type="button" id="btnNext3" disabled onclick="navStep(4)" class="bg-forest text-cream px-8 py-3 rounded-xl font-semibold opacity-50 cursor-not-allowed transition">Next</button>
+                    </div>
+                </div>
+
+                <!-- STEP 4: PATIENT INFO -->
+                <div class="wizard-step" id="step-4">
+                    <h3 class="text-xl font-bold text-forest mb-4">Patient Information</h3>
+                    <div class="space-y-4">
+                        <input type="text" id="pName" placeholder="Full Name *" class="ios-input" oninput="checkStep4()">
+                        <div class="flex gap-4">
+                            <input type="number" id="pAge" placeholder="Age *" class="ios-input w-1/3" oninput="checkStep4()">
+                            <input type="tel" id="pPhone" placeholder="Phone Number *" class="ios-input w-2/3" oninput="checkStep4()">
+                        </div>
+                        <input type="email" id="pEmail" placeholder="Email Address (Optional)" class="ios-input">
+                        <textarea id="pReason" placeholder="Reason for Visit (Optional)" class="ios-input" rows="3"></textarea>
+                    </div>
+                    <div class="mt-8 flex justify-between">
+                        <button type="button" onclick="navStep(3)" class="glass text-forest px-8 py-3 rounded-xl font-semibold hover:bg-white transition">Back</button>
+                        <button type="button" id="btnNext4" disabled onclick="populateSummary(); navStep(5)" class="bg-forest text-cream px-8 py-3 rounded-xl font-semibold opacity-50 cursor-not-allowed transition">Review</button>
+                    </div>
+                </div>
+
+                <!-- STEP 5: SUMMARY -->
+                <div class="wizard-step" id="step-5">
+                    <h3 class="text-xl font-bold text-forest mb-4">Confirm Appointment</h3>
+                    <div class="glass bg-white/60 p-6 rounded-2xl space-y-3 text-forest text-sm font-medium">
+                        <div class="flex justify-between border-b border-forest/10 pb-2">
+                            <span class="text-sage">Date & Time</span><span id="sumDateTime" class="font-bold"></span>
+                        </div>
+                        <div class="flex justify-between border-b border-forest/10 pb-2">
+                            <span class="text-sage">Service</span><span id="sumService" class="font-bold"></span>
+                        </div>
+                        <div class="flex justify-between border-b border-forest/10 pb-2">
+                            <span class="text-sage">Patient</span><span id="sumPatient" class="font-bold"></span>
+                        </div>
+                        <div class="flex justify-between pb-1">
+                            <span class="text-sage">Contact</span><span id="sumContact" class="font-bold"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- WhatsApp redirect state -->
+                    <div id="wa-loading" class="hidden text-center py-4 mt-4">
+                        <div class="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-2xl mx-auto mb-2"><i class="fas fa-check"></i></div>
+                        <p class="text-sm font-bold text-forest">Redirecting to WhatsApp...</p>
+                    </div>
+
+                    <div class="mt-8 flex justify-between" id="final-btns">
+                        <button type="button" onclick="navStep(4)" class="glass text-forest px-8 py-3 rounded-xl font-semibold hover:bg-white transition">Back</button>
+                        <button type="button" onclick="confirmAppointment()" class="bg-forest text-cream px-8 py-3 rounded-xl font-bold shadow-md hover:bg-darkGreen transition flex items-center gap-2">
+                            <i class="fab fa-whatsapp text-xl"></i> Confirm
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- CONTACT & LOCATION -->
+        <section id="contact" class="py-20 px-4 max-w-7xl mx-auto">
+            <div class="grid md:grid-cols-2 gap-8 gsap-anim">
+                <div class="glass p-10 rounded-[3rem] shadow-ios flex flex-col justify-center">
+                    <span class="text-sage font-bold tracking-widest text-xs uppercase mb-2 block">Get In Touch</span>
+                    <h2 class="font-serif text-4xl text-forest font-bold mb-8">Contact Us</h2>
+                    
+                    <div class="space-y-6 text-forest">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 rounded-full glass bg-white/50 flex items-center justify-center text-xl shrink-0"><i class="fas fa-map-marker-alt"></i></div>
+                            <div>
+                                <h4 class="font-bold mb-1">Clinic Address</h4>
+                                <p class="text-sm opacity-80" id="cAddress">Loading...</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 rounded-full glass bg-white/50 flex items-center justify-center text-xl shrink-0"><i class="fas fa-phone-alt"></i></div>
+                            <div>
+                                <h4 class="font-bold mb-1">General Inquiries</h4>
+                                <p class="text-sm opacity-80 font-medium" id="cPhone">Loading...</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 rounded-full bg-forest text-cream flex items-center justify-center text-xl shrink-0"><i class="fab fa-whatsapp"></i></div>
+                            <div>
+                                <h4 class="font-bold mb-1">Appointments</h4>
+                                <p class="text-sm opacity-80 mb-2">Book directly via WhatsApp</p>
+                                <a href="#" id="cWa" target="_blank" class="text-sage font-bold hover:text-forest transition text-sm">Chat Now <i class="fas fa-arrow-right ml-1"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="h-[400px] md:h-auto rounded-[3rem] overflow-hidden shadow-ios border border-white/40 relative">
+                    <iframe id="cMap" class="absolute inset-0 w-full h-full border-0" allowfullscreen="" loading="lazy"></iframe>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MOBILE BOTTOM DOCK (iOS Style) -->
+    <div class="md:hidden fixed bottom-6 left-4 right-4 z-50">
+        <div class="glass rounded-full px-6 py-3 flex justify-between items-center shadow-ios-lg border border-white/60 bg-white/60">
+            <a href="#home" class="flex flex-col items-center text-forest/70 hover:text-forest transition">
+                <i class="fas fa-home text-xl mb-1"></i>
+                <span class="text-[10px] font-bold">Home</span>
+            </a>
+            <a href="#services" class="flex flex-col items-center text-forest/70 hover:text-forest transition">
+                <i class="fas fa-tooth text-xl mb-1"></i>
+                <span class="text-[10px] font-bold">Services</span>
+            </a>
+            <!-- Central Main Action -->
+            <a href="#booking" class="w-14 h-14 rounded-full bg-forest text-cream flex items-center justify-center text-2xl shadow-lg -mt-8 border-4 border-[#F7F2E8] hover:scale-105 transition">
+                <i class="far fa-calendar-check"></i>
+            </a>
+            <a href="#location" class="flex flex-col items-center text-forest/70 hover:text-forest transition">
+                <i class="fas fa-map-marker-alt text-xl mb-1"></i>
+                <span class="text-[10px] font-bold">Location</span>
+            </a>
+            <a href="tel:03206660077" class="flex flex-col items-center text-forest/70 hover:text-forest transition">
+                <i class="fas fa-phone-alt text-xl mb-1"></i>
+                <span class="text-[10px] font-bold">Call</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- LIGHTBOX OVERLAY -->
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+        <img id="lightboxImg" src="" alt="Gallery View" onclick="event.stopPropagation()">
+        <button class="absolute top-6 right-6 text-cream text-4xl hover:scale-110 transition">&times;</button>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="bg-darkGreen text-cream py-12 px-4 text-center pb-32 md:pb-12">
+        <div class="max-w-7xl mx-auto">
+            <div class="font-serif text-2xl font-bold mb-2">HAMDARD</div>
+            <p class="text-sage text-sm mb-8">Dental & Skin Clinic</p>
+            <div class="flex flex-wrap justify-center gap-6 text-sm mb-8">
+                <a href="#services" class="hover:text-sage transition">Dental Care</a>
+                <a href="#services" class="hover:text-sage transition">Skin & Aesthetics</a>
+                <a href="#doctors" class="hover:text-sage transition">Doctors</a>
+                <a href="#gallery" class="hover:text-sage transition">Gallery</a>
+                <a href="#reviews" class="hover:text-sage transition">Reviews</a>
+            </div>
+            <p class="text-xs text-cream/50">&copy; 2026 Hamdard Dental & Skin Clinic. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- SCRIPTS (DATA INJECTION, 3D, ANIMATIONS, WIZARD LOGIC) -->
+    <script>
+        // --- 1. DATA INJECTION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set Logo
+            document.getElementById('navLogo').src = clinicData.logoUrl;
+
+            // Contact & Maps
+            document.getElementById('cAddress').textContent = clinicData.address;
+            document.getElementById('cPhone').textContent = clinicData.phones.general;
+            document.getElementById('cWa').href = `https://wa.me/${clinicData.phones.booking}`;
+            document.getElementById('cMap').src = clinicData.mapUrl;
+
+            // Dental
+            const dGrid = document.getElementById('dentalGrid');
+            clinicData.dentalServices.forEach(s => {
+                dGrid.innerHTML += `
+                    <div class="glass p-6 rounded-3xl hover:bg-white/60 transition group">
+                        <div class="w-12 h-12 rounded-xl bg-forest/10 flex items-center justify-center text-forest text-xl mb-4 group-hover:scale-110 transition"><i class="fas ${s.icon}"></i></div>
+                        <h3 class="font-bold text-forest mb-2">${s.name}</h3>
+                        <p class="text-sm text-forest/70 mb-4">${s.desc}</p>
+                        <a href="#booking" class="text-xs font-bold text-sage uppercase tracking-wider group-hover:text-forest transition">Learn More <i class="fas fa-arrow-right ml-1"></i></a>
+                    </div>`;
+            });
+
+            // Skin
+            const sGrid = document.getElementById('skinGrid');
+            clinicData.skinServices.forEach(s => {
+                sGrid.innerHTML += `
+                    <div class="glass bg-white/20 p-6 rounded-3xl hover:bg-white/40 transition group">
+                        <div class="w-12 h-12 rounded-xl bg-forest/10 flex items-center justify-center text-forest text-xl mb-4 group-hover:scale-110 transition"><i class="fas ${s.icon}"></i></div>
+                        <h3 class="font-bold text-forest mb-2">${s.name}</h3>
+                        <p class="text-sm text-forest/80 mb-4">${s.desc}</p>
+                        <a href="#booking" class="text-xs font-bold text-forest uppercase tracking-wider group-hover:text-white transition">Learn More <i class="fas fa-arrow-right ml-1"></i></a>
+                    </div>`;
+            });
+
+            // Doctors (Icon-based now, no images)
+            const docGrid = document.getElementById('doctorsGrid');
+            clinicData.doctors.forEach(d => {
+                docGrid.innerHTML += `
+                    <div class="glass w-full sm:w-72 rounded-[2rem] p-8 text-center shadow-ios hover:bg-white/40 transition group">
+                        <div class="w-20 h-20 mx-auto rounded-full bg-forest/10 flex items-center justify-center mb-6 group-hover:scale-110 transition duration-300">
+                            <i class="fas fa-user-md text-3xl text-forest"></i>
+                        </div>
+                        <h3 class="font-serif text-2xl text-forest font-bold mb-2">${d.name}</h3>
+                        <p class="text-sage font-bold text-sm uppercase tracking-widest">${d.title}</p>
+                    </div>`;
+            });
+
+            // Reviews
+            const revGrid = document.getElementById('reviewsGrid');
+            clinicData.reviews.forEach(r => {
+                revGrid.innerHTML += `
+                    <div class="glass bg-white/50 p-6 rounded-3xl">
+                        <div class="text-yellow-500 text-sm mb-3">${'<i class="fas fa-star"></i>'.repeat(r.rating)}</div>
+                        <p class="text-forest/80 italic mb-4 text-sm">"${r.text}"</p>
+                        <p class="font-bold text-forest text-sm">- ${r.name}</p>
+                    </div>`;
+            });
+
+            // Init Booking Calendar
+            renderCalendar();
+            renderTimeGrid();
+        });
+
+
+        // --- 2. THREE.JS LUXURY BACKGROUND ---
+        const initThree = () => {
+            const container = document.getElementById('bg-canvas');
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+            camera.position.z = 6;
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            const pointLight = new THREE.PointLight(0x879B89, 1);
+            pointLight.position.set(5, 5, 5);
+            scene.add(pointLight);
+
+            // Abstract Icosahedron
+            const geo = new THREE.IcosahedronGeometry(2.5, 0);
+            const mat = new THREE.MeshPhysicalMaterial({
+                color: 0x879B89, metalness: 0.1, roughness: 0.3,
+                transmission: 0.9, transparent: true, opacity: 0.15, wireframe: true
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            
+            // Centered for the new layout
+            mesh.position.set(0, 0, -2);
+            scene.add(mesh);
+
+            const animate = () => {
+                requestAnimationFrame(animate);
+                mesh.rotation.x += 0.0005; mesh.rotation.y += 0.001;
+                renderer.render(scene, camera);
+            };
+            animate();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth/window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                mesh.position.set(0, 0, -2);
+            });
+        };
+        initThree();
+
+
+        // --- 3. GSAP SCROLL ANIMATIONS ---
+        gsap.registerPlugin(ScrollTrigger);
+        document.querySelectorAll('.gsap-anim').forEach((el) => {
+            gsap.fromTo(el, 
+                { y: 30, opacity: 0 },
+                { y: 0, opacity: 1, duration: 0.8, ease: "power2.out",
+                  scrollTrigger: { trigger: el, start: "top 85%", toggleActions: "play none none reverse" }
+                }
+            );
+        });
+
+        // Navbar blur effect
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            if(window.scrollY > 50) nav.classList.add('bg-white/30', 'backdrop-blur-md');
+            else nav.classList.remove('bg-white/30', 'backdrop-blur-md');
+        });
+
+
+        // --- 4. LIGHTBOX ---
+        function openLightbox(src) {
+            document.getElementById('lightboxImg').src = src;
+            document.getElementById('lightbox').classList.add('active');
+        }
+        function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); }
+
+
+        // --- 5. MULTI-STEP BOOKING WIZARD LOGIC ---
+        let bState = { date: null, time: null, type: null, service: null, name: '', age: '', phone: '', email: '', reason: '' };
+        
+        // Step 1: Calendar
+        let currDate = new Date();
+        let cMonth = currDate.getMonth(), cYear = currDate.getFullYear();
+        const today = new Date(); today.setHours(0,0,0,0);
+
+        function renderCalendar() {
+            const mNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            document.getElementById('monthDisplay').textContent = `${mNames[cMonth]} ${cYear}`;
+            
+            const firstDay = new Date(cYear, cMonth, 1).getDay();
+            const daysInMonth = new Date(cYear, cMonth + 1, 0).getDate();
+            const calDays = document.getElementById('calendarDays');
+            calDays.innerHTML = '';
+
+            for(let i=0; i<firstDay; i++) calDays.innerHTML += `<div></div>`;
+
+            for(let i=1; i<=daysInMonth; i++) {
+                const iterDate = new Date(cYear, cMonth, i);
+                const isPast = iterDate < today;
+                let classStr = "day";
+                if(isPast) classStr += " disabled";
+                
+                if(bState.date) {
+                    const sDate = new Date(bState.date);
+                    if(sDate.getDate() === i && sDate.getMonth() === cMonth && sDate.getFullYear() === cYear) classStr += " selected";
+                }
+
+                calDays.innerHTML += `<div class="${classStr}" ${!isPast ? `onclick="selectDate(${cYear}, ${cMonth}, ${i})"` : ''}>${i}</div>`;
+            }
+        }
+        function changeMonth(dir) {
+            cMonth += dir;
+            if(cMonth > 11) { cMonth = 0; cYear++; }
+            if(cMonth < 0) { cMonth = 11; cYear--; }
+            renderCalendar();
+        }
+        function selectDate(y, m, d) {
+            bState.date = new Date(y, m, d).toLocaleDateString('en-US', { weekday:'short', month:'long', day:'numeric', year:'numeric'});
+            document.getElementById('displayDate').textContent = bState.date;
+            
+            const btn = document.getElementById('btnNext1');
+            btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            renderCalendar();
+        }
+
+        // Step 2: Time
+        function renderTimeGrid() {
+            const times = ["01:00 PM", "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM", "06:00 PM", "07:00 PM", "08:00 PM"];
+            const grid = document.getElementById('timeGrid');
+            times.forEach(t => {
+                grid.innerHTML += `<button type="button" class="time-btn glass py-3 rounded-xl font-medium text-forest text-sm transition hover:bg-white focus:bg-forest focus:text-white" onclick="selectTime(this, '${t}')">${t}</button>`;
+            });
+        }
+        function selectTime(btn, time) {
+            document.querySelectorAll('.time-btn').forEach(b => { b.style.background=''; b.style.color=''; });
+            btn.style.background = '#183B32'; btn.style.color = '#F7F2E8';
+            bState.time = time;
+            const nextBtn = document.getElementById('btnNext2');
+            nextBtn.disabled = false; nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
+        // Step 3: Service
+        function updateServiceDropdown() {
+            const type = document.getElementById('aptType').value;
+            bState.type = type;
+            const sSelect = document.getElementById('aptService');
+            
+            if(!type) { sSelect.classList.add('hidden'); return; }
+            sSelect.classList.remove('hidden');
+            sSelect.innerHTML = '<option value="">-- Choose Specific Service --</option>';
+            
+            const list = type === 'Dental' ? clinicData.dentalServices : clinicData.skinServices;
+            list.forEach(s => sSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`);
+            checkStep3();
+        }
+        function checkStep3() {
+            bState.service = document.getElementById('aptService').value;
+            const btn = document.getElementById('btnNext3');
+            if(bState.type && bState.service) { btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed'); }
+            else { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); }
+        }
+
+        // Step 4: Info
+        function checkStep4() {
+            bState.name = document.getElementById('pName').value.trim();
+            bState.age = document.getElementById('pAge').value.trim();
+            bState.phone = document.getElementById('pPhone').value.trim();
+            bState.email = document.getElementById('pEmail').value.trim();
+            bState.reason = document.getElementById('pReason').value.trim();
+
+            const btn = document.getElementById('btnNext4');
+            if(bState.name && bState.age && bState.phone) { btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed'); }
+            else { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); }
+        }
+
+        // Step Navigation & Summary
+        function populateSummary() {
+            document.getElementById('sumDateTime').textContent = `${bState.date} at ${bState.time}`;
+            document.getElementById('sumService').textContent = `${bState.type} - ${bState.service}`;
+            document.getElementById('sumPatient').textContent = `${bState.name} (Age: ${bState.age})`;
+            document.getElementById('sumContact').textContent = bState.phone;
+        }
+
+        function navStep(stepIndex) {
+            document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('active'));
+            document.getElementById(`step-${stepIndex}`).classList.add('active');
+            
+            // Update UI indicators
+            document.getElementById('progress-bar').style.width = `${(stepIndex-1) * 25}%`;
+            for(let i=1; i<=5; i++) {
+                const ind = document.getElementById(`ind-${i}`);
+                if(i <= stepIndex) {
+                    ind.classList.remove('border-white/50', 'text-forest/50', 'bg-cream');
+                    ind.classList.add('border-forest', 'text-forest', 'bg-white');
+                } else {
+                    ind.classList.add('border-white/50', 'text-forest/50', 'bg-cream');
+                    ind.classList.remove('border-forest', 'text-forest', 'bg-white');
+                }
+            }
+        }
+
+        function confirmAppointment() {
+            // Confetti
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#183B32', '#879B89', '#E5D8C5'] });
+            
+            // UI Switch
+            document.getElementById('final-btns').classList.add('hidden');
+            document.getElementById('wa-loading').classList.remove('hidden');
+
+            // Generate WhatsApp Msg
+            const msg = `Hello Hamdard Dental & Skin Clinic,\nI would like to book an appointment.\n\n*Name:* ${bState.name}\n*Age:* ${bState.age}\n*Phone:* ${bState.phone}\n*Type:* ${bState.type}\n*Service:* ${bState.service}\n*Date:* ${bState.date}\n*Time:* ${bState.time}\n*Reason:* ${bState.reason || 'N/A'}\n\nThank you.`;
+            
+            setTimeout(() => {
+                const url = `https://wa.me/${clinicData.phones.booking}?text=${encodeURIComponent(msg)}`;
+                window.open(url, '_blank');
+                
+                // Reset UI after 2 sec
+                setTimeout(() => {
+                    document.getElementById('final-btns').classList.remove('hidden');
+                    document.getElementById('wa-loading').classList.add('hidden');
+                    navStep(1); // Go back to start
+                }, 2000);
+            }, 1500);
+        }
+    </script>
+</body>
+</html>
